@@ -1,0 +1,48 @@
+syntax = "proto3";
+option go_package = "hoymiles-gateway/pb";
+
+// Extracted from S-Miles Installer CfgRuleConfigPBALL.GridFile*
+
+message CfgItemBO {
+  int32 id = 1;
+  int32 stc_id = 2;
+  string name = 3;
+  string key = 4;
+  map<string, string> content = 8;
+  int32 type = 6;
+  string mark = 7;
+  int32 position = 9;
+  string unit = 10;
+  double min = 11;
+  double max = 12;
+  double multiple = 13;
+  double scale = 14;
+  int32 length = 15;
+  int32 show = 16;
+  int32 edit = 17;
+  int32 change = 18;
+  int32 card_idx = 20;
+  string remarks = 22;
+}
+
+message GridFileConfigBO {
+  int32 id = 1;
+  int32 ver = 2;
+  string name = 3;
+  int32 country_std = 4;
+  string country_code = 5;
+  repeated CfgItemBO list = 6;
+}
+
+message GridFileRuleBO {
+  int32 rid = 1;
+  int32 grid_id = 2;
+  int32 min_ver = 3;
+  int32 max_ver = 4;
+  string prefix = 5;
+}
+
+message GridFileDataDTO {
+  GridFileRuleBO rule = 1;
+  GridFileConfigBO cfg = 2;
+}

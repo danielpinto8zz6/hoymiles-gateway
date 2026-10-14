@@ -1,0 +1,31 @@
+services:
+  hoymiles-gateway:
+    container_name: hoymiles-gateway
+    build: .
+    image: hoymiles-gateway:latest
+    restart: unless-stopped
+    environment:
+      # DTU / inverter — set these in .env (never commit real values)
+      HOYMILES_HOST: ${HOYMILES_HOST}
+      HOYMILES_PORT: ${HOYMILES_PORT:-10081}
+      HOYMILES_LISTEN: ${HOYMILES_LISTEN:-:8090}
+      HOYMILES_DTU_SERIAL: ${HOYMILES_DTU_SERIAL}
+      HOYMILES_INV_SERIAL: ${HOYMILES_INV_SERIAL}
+      HOYMILES_POLL: ${HOYMILES_POLL:-30s}
+      HOYMILES_TIMEOUT: ${HOYMILES_TIMEOUT:-12s}
+      HOYMILES_ENCRYPTED: ${HOYMILES_ENCRYPTED:-}
+      HOYMILES_ENC_RAND: ${HOYMILES_ENC_RAND:-}
+      # MQTT + Home Assistant discovery
+      HOYMILES_MQTT: ${HOYMILES_MQTT:-}
+      HOYMILES_MQTT_USER: ${HOYMILES_MQTT_USER:-}
+      HOYMILES_MQTT_PASS: ${HOYMILES_MQTT_PASS:-}
+      HOYMILES_MQTT_TOPIC: ${HOYMILES_MQTT_TOPIC:-hoymiles/has}
+      HOYMILES_MQTT_DISCOVERY: ${HOYMILES_MQTT_DISCOVERY:-homeassistant}
+      HOYMILES_MQTT_CLIENT_ID: ${HOYMILES_MQTT_CLIENT_ID:-hoymiles-gateway}
+      HOYMILES_DEVICE_NAME: ${HOYMILES_DEVICE_NAME:-Hoymiles HAS}
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true

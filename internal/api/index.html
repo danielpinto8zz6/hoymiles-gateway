@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Hoymiles HAS</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --bg2: #151c26;
+      --card: #1c2532;
+      --card2: #222c3c;
+      --line: #2e3b50;
+      --text: #e8eef8;
+      --muted: #8b9bb0;
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --amber: #f59e0b;
+      --purple: #a78bfa;
+      --red: #f87171;
+      --cyan: #22d3ee;
+      --radius: 16px;
+      --shadow: 0 8px 24px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+
+    /* layout */
+    .app { max-width: 1120px; margin: 0 auto; padding: 1rem 1rem 5.5rem; }
+    header.top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; margin-bottom: 1.1rem;
+    }
+    .brand { display: flex; align-items: center; gap: .75rem; }
+    .logo {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      display: grid; place-items: center; font-size: 1.25rem;
+    }
+    .brand h1 { margin: 0; font-size: 1.15rem; font-weight: 750; }
+    .brand p { margin: 0; color: var(--muted); font-size: .82rem; }
+    .status-pill {
+      padding: .4rem .85rem; border-radius: 999px; font-size: .82rem; font-weight: 650;
+      background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.35);
+    }
+    .status-pill.warn { background: rgba(245,158,11,.15); color: var(--amber); border-color: rgba(245,158,11,.35); }
+    .status-pill.bad { background: rgba(248,113,113,.15); color: var(--red); border-color: rgba(248,113,113,.35); }
+
+    /* nav */
+    nav.tabs {
+      display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .35rem;
+      margin-bottom: 1.15rem; scrollbar-width: none;
+    }
+    nav.tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto; border: 1px solid var(--line); background: var(--bg2);
+      color: var(--muted); border-radius: 999px; padding: .55rem 1.05rem;
+      font-weight: 650; font-size: .92rem; cursor: pointer;
+    }
+    .tab.active {
+      background: var(--green); color: #06281a; border-color: var(--green);
+    }
+
+    /* cards */
+    .grid { display: grid; gap: .9rem; }
+    .g2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .g4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    @media (max-width: 860px) {
+      .g3, .g4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 560px) {
+      .g2, .g3, .g4 { grid-template-columns: 1fr; }
+      header.top { flex-direction: column; align-items: flex-start; }
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--card2), var(--card));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .card h3 { margin: 0 0 .2rem; font-size: 1rem; }
+    .card .hint { color: var(--muted); font-size: .82rem; margin-top: .35rem; }
+    .metric {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: .95rem 1rem;
+    }
+    .metric .label {
+      color: var(--muted); font-size: .74rem; text-transform: uppercase;
+      letter-spacing: .05em; font-weight: 700;
+    }
+    .metric .value {
+      margin-top: .35rem; font-size: 1.55rem; font-weight: 780;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric .sub { color: var(--muted); font-size: .82rem; margin-top: .25rem; }
+    .acc-green { color: var(--green); }
+    .acc-blue { color: var(--blue); }
+    .acc-amber { color: var(--amber); }
+    .acc-purple { color: var(--purple); }
+    .acc-cyan { color: var(--cyan); }
+
+    .section-title {
+      margin: 1.35rem 0 .75rem;
+      display: flex; align-items: baseline; gap: .55rem;
+    }
+    .section-title h2 { margin: 0; font-size: 1.05rem; }
+    .section-title span { color: var(--muted); font-size: .82rem; }
+
+    .rows { overflow: hidden; }
+    .row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: .75rem; padding: .78rem .25rem;
+      border-bottom: 1px solid var(--line); font-size: .92rem;
+    }
+    .row:last-child { border-bottom: 0; }
+    .row .k { color: var(--text); }
+    .row .v { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+    .pill {
+      background: var(--bg2); border: 1px solid var(--line); border-radius: 8px;
+      padding: .28rem .7rem; font-weight: 650; font-size: .88rem;
+    }
+
+    /* modes */
+    .mode {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 1rem 1.05rem;
+    }
+    .mode .rowh {
+      display: flex; justify-content: space-between; align-items: center; gap: .75rem;
+    }
+    .mode h3 { margin: 0; font-size: 1.02rem; }
+    .mode p { margin: .55rem 0 0; color: var(--muted); font-size: .88rem; }
+    .mode .params { display: none; margin-top: .85rem; border-top: 1px solid var(--line); padding-top: .75rem; }
+    .mode.active .params { display: block; }
+    .param {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: .75rem; margin: .45rem 0; font-size: .92rem;
+    }
+    input.valbox {
+      background: var(--bg2); border: 1px solid var(--line); border-radius: 10px;
+      padding: .42rem .75rem; min-width: 76px; text-align: center;
+      color: var(--text); font-weight: 700;
+    }
+    .toggle {
+      width: 48px; height: 28px; border-radius: 999px; background: #4b5563;
+      border: none; position: relative; cursor: pointer; flex: 0 0 auto;
+    }
+    .toggle.on { background: var(--green); }
+    .toggle::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+      background: #fff; border-radius: 50%; transition: left .15s;
+    }
+    .toggle.on::after { left: 23px; }
+
+    .btn {
+      border: 1px solid var(--line); background: var(--card2); color: var(--text);
+      border-radius: 14px; padding: .78rem .9rem; font-weight: 700; cursor: pointer;
+    }
+    .btn:hover { border-color: var(--blue); }
+    .out {
+      margin-top: .75rem; background: var(--bg2); border: 1px solid var(--line);
+      border-radius: 12px; padding: .75rem; font-family: ui-monospace, Menlo, monospace;
+      font-size: .78rem; color: var(--muted); white-space: pre-wrap; max-height: 140px; overflow: auto;
+    }
+
+    /* bottom nav on mobile */
+    .bottom-nav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+      background: rgba(15,20,25,.92); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--line);
+      display: none; padding: .55rem .5rem calc(.55rem + env(safe-area-inset-bottom));
+    }
+    .bottom-nav .inner { display: flex; justify-content: space-around; max-width: 520px; margin: 0 auto; }
+    .bottom-nav button {
+      background: none; border: none; color: var(--muted); font-size: 1.35rem;
+      width: 52px; height: 48px; border-radius: 12px; cursor: pointer;
+    }
+    .bottom-nav button.active { color: var(--green); background: rgba(34,197,94,.12); }
+    @media (max-width: 720px) {
+      .bottom-nav { display: block; }
+      .app { padding-bottom: 6.5rem; }
+      nav.tabs { display: none; }
+    }
+
+    .fade-in { animation: fade .25s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none;} }
+  </style>
+</head>
+<body>
+<div class="app" x-data="app()" x-init="init()">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">⚡</div>
+      <div>
+        <h1>Hoymiles HAS</h1>
+        <p>HAS-3.0LV-EUG1 · live local gateway</p>
+      </div>
+    </div>
+    <div class="status-pill" :class="connClass" x-text="connLabel">…</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab" :class="{active: tab==='home'}" @click="tab='home'">Home</button>
+    <button class="tab" :class="{active: tab==='devices'}" @click="tab='devices'">Devices</button>
+    <button class="tab" :class="{active: tab==='modes'}" @click="tab='modes'">Modes</button>
+    <button class="tab" :class="{active: tab==='status'}" @click="tab='status'">Status</button>
+  </nav>
+
+  <!-- HOME -->
+  <section x-show="tab==='home'" x-transition class="fade-in">
+    <div class="grid g4">
+      <div class="metric">
+        <div class="label">Solar</div>
+        <div class="value acc-amber" x-text="fmtW(solarW)">–</div>
+        <div class="sub">PV production</div>
+      </div>
+      <div class="metric">
+        <div class="label">Battery</div>
+        <div class="value acc-green" x-text="(data.battery?.state_of_charge ?? '–') + '%'">–</div>
+        <div class="sub" x-text="batteryHint">–</div>
+      </div>
+      <div class="metric">
+        <div class="label">Grid</div>
+        <div class="value" :class="gridClass" x-text="fmtW(Math.abs(gridW))">–</div>
+        <div class="sub" x-text="gridHint">–</div>
+      </div>
+      <div class="metric">
+        <div class="label">Home</div>
+        <div class="value acc-purple" x-text="fmtW(loadW)">–</div>
+        <div class="sub">House load</div>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Energy flows</h2><span>watts</span></div>
+    <div class="card rows">
+      <div class="row"><div class="k">PV → Load</div><div class="v" x-text="fmtW(flow.pv_to_load)"></div></div>
+      <div class="row"><div class="k">PV → Battery</div><div class="v" x-text="fmtW(flow.pv_to_battery)"></div></div>
+      <div class="row"><div class="k">PV → Grid</div><div class="v" x-text="fmtW(flow.pv_to_grid)"></div></div>
+      <div class="row"><div class="k">Battery → Load</div><div class="v" x-text="fmtW(flow.battery_to_load)"></div></div>
+      <div class="row"><div class="k">Grid → Load</div><div class="v" x-text="fmtW(flow.grid_to_load)"></div></div>
+      <div class="row"><div class="k">Battery → Grid</div><div class="v" x-text="fmtW(flow.battery_to_grid)"></div></div>
+    </div>
+
+    <div class="section-title"><h2>Device</h2><span>identity</span></div>
+    <div class="card rows">
+      <div class="row"><div class="k">Model</div><div class="v" x-text="device.model || '—'"></div></div>
+      <div class="row"><div class="k">Firmware</div><div class="v" x-text="firmware"></div></div>
+      <div class="row"><div class="k">DTU / Inverter</div><div class="v"><span x-text="device.dtu || '—'"></span> · <span x-text="device.inverter || '—'"></span></div></div>
+      <div class="row"><div class="k">Last update</div><div class="v" x-text="updated"></div></div>
+    </div>
+  </section>
+
+  <!-- DEVICES -->
+  <section x-show="tab==='devices'" x-transition class="fade-in">
+    <div class="grid g2">
+      <div class="card">
+        <h3>⚙ Inverter</h3>
+        <div class="hint">From ES_REG / ES_DATA</div>
+        <div class="rows" style="margin-top:.65rem">
+          <div class="row"><div class="k">Serial</div><div class="v" x-text="device.inverter || '—'"></div></div>
+          <div class="row"><div class="k">Model</div><div class="v" x-text="device.model || '—'"></div></div>
+          <div class="row"><div class="k">Firmware</div><div class="v" x-text="firmware"></div></div>
+          <div class="row"><div class="k">PV strings</div><div class="v" x-text="device.pv_num ?? '—'"></div></div>
+          <div class="row"><div class="k">BMS cap</div><div class="v" x-text="device.bms_cap != null ? (device.bms_cap/10).toFixed(1)+' kWh' : '—'"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📶 DTU</h3>
+        <div class="hint">Gateway link</div>
+        <div class="rows" style="margin-top:.65rem">
+          <div class="row"><div class="k">Serial</div><div class="v" x-text="device.dtu || '—'"></div></div>
+          <div class="row"><div class="k">Host</div><div class="v">DTU TCP/10081</div></div>
+          <div class="row"><div class="k">Protocol</div><div class="v">HM + protobuf</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>⚡ CT1 · Grid</h3>
+        <div class="rows" style="margin-top:.65rem">
+          <div class="row"><div class="k">Voltage</div><div class="v" x-text="fmtNum(grid.voltage,1)+' V'"></div></div>
+          <div class="row"><div class="k">Current</div><div class="v" x-text="fmtNum(grid.current,2)+' A'"></div></div>
+          <div class="row"><div class="k">Power</div><div class="v" x-text="fmtW(grid.active_power)"></div></div>
+          <div class="row"><div class="k">Frequency</div><div class="v" x-text="fmtNum(grid.frequency,2)+' Hz'"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>⚡ CT2 · House</h3>
+        <div class="rows" style="margin-top:.65rem">
+          <div class="row"><div class="k">Voltage</div><div class="v" x-text="fmtNum(load.voltage,1)+' V'"></div></div>
+          <div class="row"><div class="k">Power</div><div class="v" x-text="fmtW(load.active_power)"></div></div>
+          <div class="row"><div class="k">Energy</div><div class="v" x-text="fmtNum(load.energy_consumed,1)+' kWh'"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🔋 Battery</h3>
+        <div class="rows" style="margin-top:.65rem">
+          <div class="row"><div class="k">SOC / SOH</div><div class="v" x-text="(data.battery?.state_of_charge ?? '—')+'% / '+(data.battery?.state_of_health ?? '—')+'%'"></div></div>
+          <div class="row"><div class="k">Voltage</div><div class="v" x-text="fmtNum(data.battery?.voltage,1)+' V'"></div></div>
+          <div class="row"><div class="k">Power</div><div class="v" x-text="fmtW(data.battery?.power)"></div></div>
+          <div class="row"><div class="k">Type</div><div class="v" x-text="data.battery?.type==1 ? 'Li-ion' : 'Battery'"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🌀 Inverter AC</h3>
+        <div class="rows" style="margin-top:.65rem">
+          <div class="row"><div class="k">Power</div><div class="v" x-text="fmtW(inv.active_power)"></div></div>
+          <div class="row"><div class="k">Voltage</div><div class="v" x-text="fmtNum(inv.voltage,1)+' V'"></div></div>
+          <div class="row"><div class="k">DC V / I</div><div class="v" x-text="fmtNum(inv.dc_voltage,1)+' V · '+fmtNum(inv.dc_current,2)+' A'"></div></div>
+          <div class="row"><div class="k">EPS</div><div class="v" x-text="fmtW(inv.eps_power)"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODES -->
+  <section x-show="tab==='modes'" x-transition class="fade-in">
+    <div class="section-title"><h2>Operating mode</h2><span>only one can be active</span></div>
+    <div class="grid g2" style="gap:.75rem">
+      <template x-for="m in modes" :key="m.id">
+        <div class="mode" :class="{active: activeMode===m.id}">
+          <div class="rowh">
+            <h3 x-text="m.title"></h3>
+            <button class="toggle" :class="{on: activeMode===m.id}" @click="selectMode(m.id)"></button>
+          </div>
+          <p x-text="m.desc"></p>
+          <div class="params">
+            <template x-for="f in m.fields" :key="f.key">
+              <div class="param">
+                <div x-text="f.label"></div>
+                <div style="display:flex;align-items:center;gap:.45rem">
+                  <input class="valbox" type="number" :id="f.key" :value="f.value" :min="f.min" :max="f.max"/>
+                  <span style="color:var(--muted)" x-text="f.unit"></span>
+                </div>
+              </div>
+            </template>
+            <button class="btn" style="width:100%;margin-top:.7rem" @click="applyMode(m.id)">Apply</button>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="out" x-text="ctrlOut || 'Ready'"></div>
+  </section>
+
+  <!-- STATUS -->
+  <section x-show="tab==='status'" x-transition class="fade-in">
+    <div class="section-title"><h2>Battery</h2><span>live</span></div>
+    <div class="card rows">
+      <div class="row"><div class="k">SOC</div><div class="v" x-text="(data.battery?.state_of_charge ?? '—')+' %'"></div></div>
+      <div class="row"><div class="k">SOH</div><div class="v" x-text="(data.battery?.state_of_health ?? '—')+' %'"></div></div>
+      <div class="row"><div class="k">Voltage</div><div class="v" x-text="fmtNum(data.battery?.voltage,1)+' V'"></div></div>
+      <div class="row"><div class="k">Power</div><div class="v" x-text="fmtW(data.battery?.power)"></div></div>
+      <div class="row"><div class="k">Charge limit</div><div class="v" x-text="(data.battery?.internal_charge_mode/10 ?? '—')+' A'"></div></div>
+      <div class="row"><div class="k">Discharge limit</div><div class="v" x-text="(data.battery?.internal_discharge_mode/10 ?? '—')+' A'"></div></div>
+      <div class="row"><div class="k">Temperature</div><div class="v" x-text="fmtNum(data.battery?.temp_high_charge,1)+' °C'"></div></div>
+      <div class="row"><div class="k">Energy charged / discharged</div><div class="v" x-text="(data.battery?.energy_charged ?? '—')+' / '+(data.battery?.energy_discharged ?? '—')+' kWh'"></div></div>
+    </div>
+
+    <div class="section-title"><h2>Grid & load</h2><span>CT / live</span></div>
+    <div class="card rows">
+      <div class="row"><div class="k">Grid voltage / frequency</div><div class="v" x-text="fmtNum(grid.voltage,1)+' V · '+fmtNum(grid.frequency,2)+' Hz'"></div></div>
+      <div class="row"><div class="k">Grid power</div><div class="v" x-text="fmtW(grid.active_power)"></div></div>
+      <div class="row"><div class="k">Power factor</div><div class="v" x-text="fmtNum(grid.power_factor,2)"></div></div>
+      <div class="row"><div class="k">House load</div><div class="v" x-text="fmtW(load.active_power)"></div></div>
+      <div class="row"><div class="k">Inverter</div><div class="v" x-text="fmtW(inv.active_power)"></div></div>
+      <div class="row"><div class="k">EPS</div><div class="v" x-text="fmtW(inv.eps_power)"></div></div>
+      <div class="row"><div class="k">Isolation / leakage</div><div class="v" x-text="fmtNum(inv.isolation_resistance,0)+' kΩ · '+fmtNum(inv.leakage_current,0)+' mA'"></div></div>
+      <div class="row"><div class="k">DRM</div><div class="v" x-text="inv.drm_signal ?? '—'"></div></div>
+      <div class="row"><div class="k">Last update</div><div class="v" x-text="updated"></div></div>
+    </div>
+  </section>
+</div>
+
+<div class="bottom-nav">
+  <div class="inner">
+    <button :class="{active: tab==='home'}" @click="tab='home'">⌂</button>
+    <button :class="{active: tab==='devices'}" @click="tab='devices'">⚙</button>
+    <button :class="{active: tab==='modes'}" @click="tab='modes'">☰</button>
+    <button :class="{active: tab==='status'}" @click="tab='status'">≡</button>
+  </div>
+</div>
+
+<script>
+function app() {
+  return {
+    tab: 'home',
+    conn: 'connecting',
+    data: {},
+    device: {},
+    ctrlOut: '',
+    activeMode: 'self_use',
+    modes: [
+      { id:'self_use', title:'Self-use mode', desc:'Solar → load → battery → grid.',
+        fields:[{key:'soc_self',label:'Reserve SOC',value:20,min:0,max:100,unit:'%'}] },
+      { id:'economic', title:'Economic mode', desc:'Time-of-use: shift battery off peak.',
+        fields:[{key:'soc_eco',label:'Reserve SOC',value:20,min:0,max:100,unit:'%'}] },
+      { id:'backup_power', title:'Backup mode', desc:'Battery only discharges during outage.',
+        fields:[{key:'soc_bak',label:'Reserve SOC',value:80,min:0,max:100,unit:'%'}] },
+      { id:'pure_off_grid', title:'Off-grid mode', desc:'No grid connection.',
+        fields:[{key:'soc_off',label:'Reserve SOC',value:20,min:0,max:100,unit:'%'}] },
+      { id:'forced_charging', title:'Forced charging', desc:'Charge if SOC is below safe level.',
+        fields:[{key:'soc_fc',label:'Reserve SOC',value:70,min:0,max:100,unit:'%'},{key:'pwr_fc',label:'Max charge power',value:50,min:0,max:100,unit:'%'}] },
+      { id:'forced_discharge', title:'Forced discharge', desc:'Discharge if SOC is above safe level.',
+        fields:[{key:'soc_fd',label:'Reserve SOC',value:20,min:0,max:100,unit:'%'},{key:'pwr_fd',label:'Max discharge power',value:80,min:0,max:100,unit:'%'}] },
+      { id:'peak_shaving', title:'Peak shaving', desc:'Battery charging required.',
+        fields:[{key:'soc_pk',label:'Reserve SOC',value:20,min:0,max:100,unit:'%'},{key:'soc_ref',label:'Reference SOC',value:0,min:0,max:100,unit:'%'},{key:'pwr_pk',label:'Peak meter power',value:2000,min:0,max:20000,unit:'W'}] },
+      { id:'time_of_use', title:'Time of use', desc:'PV export priority: load, battery, grid.',
+        fields:[{key:'soc_tou',label:'Reserve SOC',value:50,min:0,max:100,unit:'%'},{key:'pwr_tou_c',label:'Max charge power',value:100,min:0,max:100,unit:'%'}] },
+    ],
+
+    get grid() { return this.data.grid?.phases?.[0] || {}; },
+    get load() { return this.data.load?.phases?.[0] || {}; },
+    get inv() { return this.data.inverter?.phases?.[0] || {}; },
+    get flow() { return this.data.power_flow || {}; },
+    get gridW() { return Number(this.grid.active_power) || 0; },
+    get loadW() { return Number(this.load.active_power) || 0; },
+    get solarW() {
+      let p = 0; (this.data.pv_panels || []).forEach(x => p += Number(x.power)||0);
+      if (!p) p = (Number(this.flow.pv_to_load)||0)+(Number(this.flow.pv_to_battery)||0)+(Number(this.flow.pv_to_grid)||0);
+      return p;
+    },
+    get batteryHint() {
+      const c = Number(this.flow.pv_to_battery)||0, d = Number(this.flow.battery_to_load)||0;
+      if (c>10) return `Charging ${Math.round(c)} W`;
+      if (d>10) return `Discharging ${Math.round(d)} W`;
+      return 'Idle';
+    },
+    get gridHint() {
+      const g = this.gridW;
+      return g<0 ? 'exporting' : g>0 ? 'importing' : 'idle';
+    },
+    get gridClass() {
+      return this.gridW < 0 ? 'acc-green' : this.gridW > 0 ? 'acc-amber' : 'acc-blue';
+    },
+    get firmware() {
+      return [this.device.sw_m, this.device.sw_s, this.device.sw_sys].filter(Boolean).join(' / ') || '—';
+    },
+    get updated() {
+      return this.data.timestamp ? new Date(this.data.timestamp*1000).toLocaleTimeString() : '—';
+    },
+    get connLabel() {
+      return this.conn==='online' ? 'Online' : this.conn==='degraded' ? 'Reconnecting' : 'Connecting…';
+    },
+    get connClass() {
+      return this.conn==='online' ? '' : this.conn==='degraded' ? 'warn' : 'warn';
+    },
+
+    fmtW(v) {
+      if (v==null || isNaN(v)) return '–';
+      return Math.round(v) + ' W';
+    },
+    fmtNum(v, d) {
+      if (v==null || isNaN(v)) return '–';
+      return Number(v).toFixed(d ?? 0);
+    },
+
+    async init() {
+      this.loadStatus();
+      this.loadState();
+      this.openSSE();
+      setInterval(() => this.loadState(), 8000);
+      setInterval(() => this.loadStatus(), 60000);
+    },
+
+    async loadState() {
+      try {
+        const r = await fetch('/api/v1/state');
+        const j = await r.json();
+        this.data = j.state || j;
+        this.conn = 'online';
+      } catch (e) { this.conn = 'degraded'; }
+    },
+    async loadStatus() {
+      try {
+        const r = await fetch('/api/v1/status');
+        const j = await r.json();
+        this.device = j.device || {};
+        if (j.live && Object.keys(j.live).length) this.data = j.live;
+      } catch (e) {}
+    },
+    openSSE() {
+      const es = new EventSource('/api/v1/stream');
+      es.onmessage = (ev) => {
+        try { this.data = JSON.parse(ev.data); this.conn = 'online'; } catch (e) {}
+      };
+      es.onerror = () => { this.conn = 'degraded'; };
+    },
+
+    selectMode(id) {
+      this.activeMode = id;
+    },
+    async applyMode(id) {
+      const m = this.modes.find(x => x.id === id);
+      const body = { cmd: 'bms_mode', mode: id };
+      (m?.fields || []).forEach(f => {
+        const el = document.getElementById(f.key);
+        const v = el ? parseInt(el.value, 10) : f.value;
+        if (f.key.startsWith('soc_')) body.rev_soc = v;
+        if (f.key.startsWith('pwr_fc') || f.key.startsWith('pwr_fd') || f.key.startsWith('pwr_tou')) body.max_power = v;
+        if (f.key === 'soc_ref') body.peak_soc = v;
+        if (f.key === 'pwr_pk') body.peak_meter_power = v;
+      });
+      if (body.rev_soc == null) body.rev_soc = 20;
+      try {
+        const r = await fetch('/api/v1/bms/mode', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(body),
+        });
+        const t = await r.text();
+        this.ctrlOut = JSON.stringify(body) + '\n' + t.slice(0, 500);
+      } catch (e) { this.ctrlOut = String(e); }
+    },
+  };
+}
+</script>
+</body>
+</html>
