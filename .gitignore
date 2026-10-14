@@ -3,6 +3,5 @@ bin/
 *.test
 .DS_Store
 .env
-deploy/.env
 *.pcap
 __pycache__/

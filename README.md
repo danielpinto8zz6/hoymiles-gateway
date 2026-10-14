@@ -78,10 +78,6 @@ docker run --rm -p 8090:8090 hoymiles-gateway \
   -host YOUR_DTU_HOST -dtu-serial YOUR_DTU_SERIAL -inverter-serial YOUR_INV_SERIAL
 ```
 
-## systemd
-
-See `deploy/hoymiles-gateway.service`.
-
 ## Control / grid profile API
 
 | Endpoint | Method | Notes |
@@ -135,74 +131,34 @@ require `"confirm": "I_UNDERSTAND"`.
 (SOC, SOH, battery V/W/temp, grid P/V/A/Hz/energy, load, inverter, PV strings,
 power-flow paths, grid import/export).
 
-### systemd (optional)
-
-`~/.config/systemd/user/hoymiles-gateway.service`
-```bash
-systemctl --user restart hoymiles-gateway
-journalctl --user -u hoymiles-gateway -f
-```
-
 ## Docker Compose
 
-Installed at `/mnt/data/hoymiles-gateway/` on the Docker host.
-Configuration is **env-only** (no long `command:`). Defaults match this site;
-override via `.env` (see `deploy/.env.example`).
-
-```yaml
-services:
-  hoymiles-gateway:
-    container_name: hoymiles-gateway
-    build: .
-    image: hoymiles-gateway:latest
-    restart: unless-stopped
-    environment:
-      HOYMILES_HOST: ${HOYMILES_HOST:-YOUR_DTU_HOST}
-      HOYMILES_DTU_SERIAL: ${HOYMILES_DTU_SERIAL:-YOUR_DTU_SERIAL}
-      HOYMILES_INV_SERIAL: ${HOYMILES_INV_SERIAL:-YOUR_INV_SERIAL}
-      HOYMILES_POLL: ${HOYMILES_POLL:-30s}
-      HOYMILES_MQTT: ${HOYMILES_MQTT:-tcp://YOUR_MQTT_HOST:1883}
-      HOYMILES_MQTT_TOPIC: ${HOYMILES_MQTT_TOPIC:-hoymiles/has}
-    networks: [proxy-network]
-networks:
-  proxy-network: { external: true }
-```
+1. Copy `docker-compose.yml` and `.env.example` to your deploy directory.
+2. Fill `.env` with your DTU / MQTT settings (never commit `.env`).
+3. Run:
 
 ```bash
-cd /mnt/data/hoymiles-gateway
+cp .env.example .env
+# edit .env
 docker compose up -d
 docker compose logs -f
 ```
 
 ### Env vars
 
-| Variable | Default |
+| Variable | Example |
 |----------|---------|
-| `HOYMILES_HOST` | `YOUR_DTU_HOST` |
+| `HOYMILES_HOST` | `192.168.1.50` |
 | `HOYMILES_PORT` | `10081` |
 | `HOYMILES_LISTEN` | `:8090` |
-| `HOYMILES_DTU_SERIAL` | site DTU SN |
-| `HOYMILES_INV_SERIAL` | site INV SN |
+| `HOYMILES_DTU_SERIAL` | your DTU serial |
+| `HOYMILES_INV_SERIAL` | your inverter serial |
 | `HOYMILES_POLL` | `30s` |
 | `HOYMILES_TIMEOUT` | `12s` |
-| `HOYMILES_MQTT` | `tcp://YOUR_MQTT_HOST:1883` |
+| `HOYMILES_MQTT` | `tcp://mqtt-host:1883` |
 | `HOYMILES_MQTT_TOPIC` | `hoymiles/has` |
 | `HOYMILES_MQTT_DISCOVERY` | `homeassistant` |
 | `HOYMILES_DEVICE_NAME` | `Hoymiles HAS` |
-| `HOYMILES_ENCRYPTED` / `HOYMILES_ENC_RAND` | empty (unencrypted) |
-
-### Caddy
-
-```caddy
-@hoymiles host hoymiles.example.com
-handle @hoymiles {
-    reverse_proxy hoymiles-gateway:8090
-}
-```
-
-URL: **https://hoymiles.example.com/** (LAN / VPN via `internal_only`)
-
-> systemd user unit was removed — Docker Compose only.
 
 ## MQTT commands
 
