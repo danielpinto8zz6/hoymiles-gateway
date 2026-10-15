@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"hoymiles-gateway/internal/api"
 	"hoymiles-gateway/internal/config"
 	"hoymiles-gateway/internal/dtu"
+	"hoymiles-gateway/internal/history"
 	"hoymiles-gateway/internal/mqtt"
 )
 
@@ -35,6 +37,44 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// SQLite telemetry history
+	var hist *history.Store
+	if cfg.DBPath != "" {
+		var err error
+		hist, err = history.Open(cfg.DBPath)
+		if err != nil {
+			log.Printf("history disabled: %v", err)
+			hist = nil
+		} else {
+			log.Printf("history store: %s (%s)", cfg.DBPath, hist)
+			// persist every snapshot
+			go func() {
+				ch, unsub := bus.Subscribe()
+				defer unsub()
+				for snap := range ch {
+					_ = hist.Insert(snapshotToSample(snap))
+				}
+			}()
+			// prune daily
+			if cfg.HistoryDays > 0 {
+				go func() {
+					tk := time.NewTicker(24 * time.Hour)
+					defer tk.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-tk.C:
+							if n, err := hist.Prune(time.Now().AddDate(0, 0, -cfg.HistoryDays).Unix()); err == nil && n > 0 {
+								log.Printf("history pruned %d rows", n)
+							}
+						}
+					}
+				}()
+			}
+		}
+	}
 
 	// MQTT + Home Assistant discovery (optional)
 	var pub *mqtt.Publisher
@@ -117,6 +157,7 @@ func main() {
 		Client:    client,
 		DTUSerial: cfg.DTUSerial,
 		InvSerial: cfg.InverterSerial,
+		History:   hist,
 	}
 
 	httpServer := &http.Server{
@@ -130,6 +171,9 @@ func main() {
 		if pub != nil {
 			pub.Close()
 		}
+		if hist != nil {
+			_ = hist.Close()
+		}
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = httpServer.Shutdown(shutdownCtx)
@@ -142,4 +186,22 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println("shutdown complete")
+}
+
+
+func snapshotToSample(s any) history.Sample {
+	// bus Snapshot is a struct; convert via JSON for stable field access
+	b, err := json.Marshal(s)
+	if err != nil {
+		return history.Sample{TS: time.Now().Unix()}
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return history.Sample{TS: time.Now().Unix()}
+	}
+	ts := time.Now().Unix()
+	if v, ok := m["timestamp"].(float64); ok && v > 0 {
+		ts = int64(v)
+	}
+	return history.FromSnapshot(ts, m)
 }

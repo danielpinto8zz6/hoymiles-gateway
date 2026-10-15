@@ -68,7 +68,7 @@ POST /api/v1/bms/mode
 - Hybrid uses **extended** frames (`c302` ES_REG, `c303` ES_DATA, `c308` ES_USER_SET).
 - Optional AES-128-GCM when DTU `dfs` bit 25 is set.
 - Scales match `ha-hoymiles-wifi` (V×0.1, A×0.01, freq×0.01, …).
-- Full map: [`../docs/PROTOCOL.md`](../docs/PROTOCOL.md).
+- Full map: [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
 
 ## Docker
 

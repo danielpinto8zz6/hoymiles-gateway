@@ -340,6 +340,7 @@
     <button class="tab" :class="{active: tab==='devices'}" @click="tab='devices'">Devices</button>
     <button class="tab" :class="{active: tab==='modes'}" @click="tab='modes'">Modes</button>
     <button class="tab" :class="{active: tab==='status'}" @click="tab='status'">Status</button>
+    <button class="tab" :class="{active: tab==='history'}" @click="tab='history'">History</button>
   </nav>
 
   <!-- HOME -->
@@ -503,6 +504,36 @@
       <div class="row"><div class="k">Last update</div><div class="v" x-text="updated"></div></div>
     </div>
   </section>
+
+  <!-- HISTORY -->
+  <section x-show="tab==='history'" x-transition class="fade-in">
+    <div class="section-title"><h2>History</h2><span>SQLite · last 24h</span></div>
+    <div class="grid g2">
+      <article class="card">
+        <h3>Power</h3>
+        <p class="hint">Solar · Grid · Load · Battery W</p>
+        <canvas id="chart_power" height="160" style="width:100%;margin-top:.75rem"></canvas>
+      </article>
+      <article class="card">
+        <h3>Battery SOC</h3>
+        <p class="hint">%</p>
+        <canvas id="chart_soc" height="160" style="width:100%;margin-top:.75rem"></canvas>
+      </article>
+    </div>
+    <article class="card" style="margin-top:1rem">
+      <h3>Samples</h3>
+      <p class="hint" x-text="histCount + ' points stored'"></p>
+      <div class="rows">
+        <template x-for="h in histPreview" :key="h.ts">
+          <div class="row">
+            <div class="k" x-text="new Date(h.ts*1000).toLocaleString()"></div>
+            <div class="v" x-text="'SOC '+Math.round(h.soc)+'% · load '+Math.round(h.load_power)+' W · grid '+Math.round(h.grid_power)+' W'"></div>
+          </div>
+        </template>
+      </div>
+    </article>
+  </section>
+
 </div>
 
 <div class="bottom-nav">
@@ -511,6 +542,7 @@
     <button :class="{active: tab==='devices'}" @click="tab='devices'">⚙</button>
     <button :class="{active: tab==='modes'}" @click="tab='modes'">☰</button>
     <button :class="{active: tab==='status'}" @click="tab='status'">≡</button>
+    <button :class="{active: tab==='history'}" @click="tab='history'">▤</button>
   </div>
 </div>
 
@@ -518,6 +550,8 @@
 function app() {
   return {
     tab: 'home',
+    hist: [],
+    histCount: 0,
     conn: 'connecting',
     data: {},
     device: {},
@@ -542,6 +576,7 @@ function app() {
         fields:[{key:'soc_tou',label:'Reserve SOC',value:50,min:0,max:100,unit:'%'},{key:'pwr_tou_c',label:'Max charge power',value:100,min:0,max:100,unit:'%'}] },
     ],
 
+    get histPreview() { return this.hist.slice(-12).reverse(); },
     get grid() { return this.data.grid?.phases?.[0] || {}; },
     get load() { return this.data.load?.phases?.[0] || {}; },
     get inv() { return this.data.inverter?.phases?.[0] || {}; },
@@ -592,7 +627,9 @@ function app() {
       this.loadStatus();
       this.loadState();
       this.openSSE();
+      this.loadHistory();
       setInterval(() => this.loadState(), 8000);
+      setInterval(() => this.loadHistory(), 60000);
       setInterval(() => this.loadStatus(), 60000);
     },
 
@@ -611,6 +648,65 @@ function app() {
         this.device = j.device || {};
         if (j.live && Object.keys(j.live).length) this.data = j.live;
       } catch (e) {}
+    },
+    async loadHistory() {
+      try {
+        const r = await fetch('/api/v1/history?limit=2000');
+        const j = await r.json();
+        this.hist = j.items || [];
+        this.histCount = j.count || this.hist.length;
+        this.drawCharts();
+      } catch (e) {}
+    },
+    drawCharts() {
+      this.drawChart('chart_power', [
+        { key: 'solar_power', color: '#f59e0b' },
+        { key: 'load_power', color: '#a78bfa' },
+        { key: 'grid_power', color: '#3b82f6' },
+        { key: 'battery_power', color: '#22c55e' },
+      ]);
+      this.drawChart('chart_soc', [ { key: 'soc', color: '#22d3ee', min: 0, max: 100 } ]);
+    },
+    drawChart(id, series) {
+      const c = document.getElementById(id);
+      if (!c || !this.hist.length) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = c.clientWidth || 400;
+      const h = 160;
+      c.width = w * dpr; c.height = h * dpr;
+      c.style.height = h + 'px';
+      const ctx = c.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, h);
+      const pad = 8;
+      let min = Infinity, max = -Infinity;
+      series.forEach(s => {
+        this.hist.forEach(p => {
+          const v = Number(p[s.key]) || 0;
+          if (v < min) min = v;
+          if (v > max) max = v;
+        });
+        if (s.min != null) min = Math.min(min, s.min);
+        if (s.max != null) max = Math.max(max, s.max);
+      });
+      if (!isFinite(min) || !isFinite(max) || min === max) { min = 0; max = 1; }
+      const y = (v) => h - pad - ((v - min) / (max - min)) * (h - 2 * pad);
+      const x = (i) => pad + (i / Math.max(1, this.hist.length - 1)) * (w - 2 * pad);
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      for (let i = 0; i < 4; i++) {
+        const yy = pad + i * (h - 2 * pad) / 3;
+        ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(w - pad, yy); ctx.stroke();
+      }
+      series.forEach(s => {
+        ctx.beginPath();
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 1.8;
+        this.hist.forEach((p, i) => {
+          const xx = x(i), yy = y(Number(p[s.key]) || 0);
+          if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        });
+        ctx.stroke();
+      });
     },
     openSSE() {
       const es = new EventSource('/api/v1/stream');

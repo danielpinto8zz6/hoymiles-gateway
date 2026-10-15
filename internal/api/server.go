@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
 	"hoymiles-gateway/internal/dtu"
+	"hoymiles-gateway/internal/history"
 	"hoymiles-gateway/pb"
 )
 
@@ -401,6 +404,13 @@ type Server struct {
 	Client    *dtu.Client
 	DTUSerial uint64
 	InvSerial int64
+	History   HistoryStore
+}
+
+// HistoryStore is optional SQLite-backed telemetry history.
+type HistoryStore interface {
+	Query(start, end int64, limit int) ([]history.Sample, error)
+	Count() (int, error)
 }
 
 func (s *Server) Handler() http.Handler {
@@ -413,6 +423,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/v1/network", s.handleNetwork)
 	mux.HandleFunc("/api/v1/status", s.handleStatus)
 	mux.HandleFunc("/api/v1/stream", s.handleSSE)
+	mux.HandleFunc("/api/v1/history", s.handleHistory)
 	mux.HandleFunc("/api/v1/bms/mode", s.handleBMSMode)
 	mux.HandleFunc("/api/v1/command", s.handleCommand)
 	mux.HandleFunc("/api/v1/command/power-limit", s.handlePowerLimit)
@@ -552,6 +563,44 @@ func firstPvNum(reg *Registry) int32 {
 		return reg.Inverters[0].PvNum
 	}
 	return 0
+}
+
+
+func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
+	if s.History == nil || reflect.ValueOf(s.History).IsNil() {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "history not enabled"})
+		return
+	}
+	q := r.URL.Query()
+	start := time.Now().Add(-24 * time.Hour).Unix()
+	if v := q.Get("start"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			start = n
+		}
+	}
+	var end int64
+	if v := q.Get("end"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			end = n
+		}
+	}
+	limit := 2000
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+	items, err := s.History.Query(start, end, limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"start": start,
+		"end":   end,
+		"count": len(items),
+		"items": items,
+	})
 }
 
 func (s *Server) handleNetwork(w http.ResponseWriter, r *http.Request) {

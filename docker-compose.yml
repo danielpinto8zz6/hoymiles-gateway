@@ -23,6 +23,10 @@ services:
       HOYMILES_MQTT_DISCOVERY: ${HOYMILES_MQTT_DISCOVERY:-homeassistant}
       HOYMILES_MQTT_CLIENT_ID: ${HOYMILES_MQTT_CLIENT_ID:-hoymiles-gateway}
       HOYMILES_DEVICE_NAME: ${HOYMILES_DEVICE_NAME:-Hoymiles HAS}
+      HOYMILES_DB: ${HOYMILES_DB:-/data/history.db}
+      HOYMILES_HISTORY_DAYS: ${HOYMILES_HISTORY_DAYS:-90}
+    volumes:
+      - ./data:/data
     networks:
       - proxy-network
 

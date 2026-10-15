@@ -26,6 +26,8 @@ type Config struct {
 	MQTTDiscPref string
 	MQTTClientID string
 	DeviceName   string
+	DBPath       string
+	HistoryDays  int
 }
 
 func Parse() Config {
@@ -47,6 +49,8 @@ func Parse() Config {
 	flag.StringVar(&cfg.MQTTDiscPref, "mqtt-discovery", env("HOYMILES_MQTT_DISCOVERY", "homeassistant"), "HA discovery prefix")
 	flag.StringVar(&cfg.MQTTClientID, "mqtt-client-id", env("HOYMILES_MQTT_CLIENT_ID", "hoymiles-gateway"), "MQTT client id")
 	flag.StringVar(&cfg.DeviceName, "device-name", env("HOYMILES_DEVICE_NAME", "Hoymiles HAS"), "HA device name")
+	flag.StringVar(&cfg.DBPath, "db", env("HOYMILES_DB", "data/history.db"), "sqlite history path")
+	flag.IntVar(&cfg.HistoryDays, "history-days", envInt("HOYMILES_HISTORY_DAYS", 90), "history retention days")
 
 	flag.Parse()
 
