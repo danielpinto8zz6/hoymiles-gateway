@@ -314,6 +314,35 @@ func (p *Publisher) announce() error {
 		tk.Wait()
 	}
 
+	// Command buttons (publish JSON to cmd topic)
+	buttons := []struct {
+		ID      string
+		Name    string
+		Icon    string
+		Payload string
+	}{
+		{"limit_80", "Power limit 80%", "mdi:speedometer", `{"cmd":"power_limit","percent":80}`},
+		{"limit_0", "Power limit 0% (stop export)", "mdi:transmission-tower-off", `{"cmd":"power_limit","percent":0}`},
+		{"limit_100", "Power limit 100%", "mdi:flash", `{"cmd":"power_limit","percent":100}`},
+		{"inv_on", "Inverter on", "mdi:power", `{"cmd":"inverter","on":true}`},
+		{"bms_balance", "BMS balance", "mdi:battery-heart-variant", `{"cmd":"bms_balance"}`},
+	}
+	for _, b := range buttons {
+		cfg := map[string]any{
+			"name":               b.Name,
+			"unique_id":          "hoymiles_has_" + b.ID,
+			"command_topic":      p.topic("cmd"),
+			"payload_press":      b.Payload,
+			"availability_topic": p.availabilityTopic(),
+			"device":             p.deviceBlock(),
+			"entity_category":    "config",
+			"icon":               b.Icon,
+		}
+		bb, _ := json.Marshal(cfg)
+		tk := p.cli.Publish(fmt.Sprintf("%s/button/hoymiles_has_%s/config", p.cfg.DiscoveryPrefix, b.ID), 0, true, bb)
+		tk.Wait()
+	}
+
 	// Last successful DTU update (diagnostic)
 	lastCfg := map[string]any{
 		"name":              "Hoymiles last update",
@@ -335,8 +364,8 @@ func (p *Publisher) announce() error {
 	p.mu.Lock()
 	p.announced = true
 	p.mu.Unlock()
-	log.Printf("mqtt discovery announced (%d sensors + last_update) under %s expire_after=%ds",
-		len(ents), p.cfg.DiscoveryPrefix, p.cfg.ExpireAfterSec)
+	log.Printf("mqtt discovery announced (%d sensors + last_update + %d buttons) under %s expire_after=%ds",
+		len(ents), len(buttons), p.cfg.DiscoveryPrefix, p.cfg.ExpireAfterSec)
 	return nil
 }
 

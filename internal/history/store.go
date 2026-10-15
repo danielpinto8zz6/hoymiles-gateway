@@ -223,3 +223,69 @@ func FromSnapshot(ts int64, m map[string]any) Sample {
 		BatToGrid:    get("power_flow", "battery_to_grid"),
 	}
 }
+
+
+// QueryBucketed returns time-bucketed averages (bucket seconds, e.g. 60).
+func (s *Store) QueryBucketed(start, end int64, bucketSec, limit int) ([]Sample, error) {
+	if bucketSec <= 0 {
+		bucketSec = 60
+	}
+	if limit <= 0 || limit > 20000 {
+		limit = 2000
+	}
+	q := `
+SELECT
+  (ts / ?) * ? AS bucket_ts,
+  AVG(soc), AVG(battery_power), AVG(battery_v),
+  AVG(grid_power), AVG(load_power), AVG(inv_power), AVG(solar_power),
+  AVG(pv_to_load), AVG(pv_to_battery), AVG(pv_to_grid),
+  AVG(battery_to_load), AVG(grid_to_load), AVG(battery_to_grid)
+FROM samples
+WHERE ts >= ?`
+	args := []any{bucketSec, bucketSec, start}
+	if end > 0 {
+		q += " AND ts <= ?"
+		args = append(args, end)
+	}
+	q += " GROUP BY bucket_ts ORDER BY bucket_ts ASC LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]Sample, 0, 256)
+	for rows.Next() {
+		var x Sample
+		if err := rows.Scan(
+			&x.TS, &x.SOC, &x.BatteryPower, &x.BatteryV, &x.GridPower, &x.LoadPower,
+			&x.InvPower, &x.SolarPower, &x.PVToLoad, &x.PVToBattery, &x.PVToGrid,
+			&x.BatToLoad, &x.GridToLoad, &x.BatToGrid,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
+	return out, rows.Err()
+}
+
+// BucketSize picks a sensible downsample window for a time range.
+func BucketSize(start, end int64) int {
+	if end <= start {
+		return 60
+	}
+	span := end - start
+	switch {
+	case span <= 3600:
+		return 60          // 1h → 1 min
+	case span <= 6*3600:
+		return 300         // 6h → 5 min
+	case span <= 86400:
+		return 900         // 24h → 15 min
+	case span <= 7*86400:
+		return 3600        // 7d → 1 h
+	default:
+		return 21600       // 30d+ → 6 h
+	}
+}

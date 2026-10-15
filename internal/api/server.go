@@ -410,6 +410,7 @@ type Server struct {
 // HistoryStore is optional SQLite-backed telemetry history.
 type HistoryStore interface {
 	Query(start, end int64, limit int) ([]history.Sample, error)
+	QueryBucketed(start, end int64, bucketSec, limit int) ([]history.Sample, error)
 	Count() (int, error)
 }
 
@@ -590,16 +591,26 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
 			limit = n
 		}
 	}
-	items, err := s.History.Query(start, end, limit)
+	bucket := 0
+	if v := q.Get("bucket"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			bucket = n
+		}
+	}
+	if bucket <= 0 {
+		bucket = history.BucketSize(start, time.Now().Unix())
+	}
+	items, err := s.History.QueryBucketed(start, end, bucket, limit)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"start": start,
-		"end":   end,
-		"count": len(items),
-		"items": items,
+		"start":  start,
+		"end":    end,
+		"bucket": bucket,
+		"count":  len(items),
+		"items":  items,
 	})
 }
 
