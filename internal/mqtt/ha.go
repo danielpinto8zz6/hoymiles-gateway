@@ -330,6 +330,35 @@ func (p *Publisher) announce() error {
 		"icon":               "mdi:speedometer",
 		"mode":               "select",
 	}
+	// BMS operating mode select (matches S-Miles modes)
+	bmsSel := map[string]any{
+		"name":               "Operating mode",
+		"unique_id":          "hoymiles_has_bms_mode",
+		"command_topic":      p.topic("cmd"),
+		"command_template":   `{"cmd":"bms_mode","mode":"{{ value }}","rev_soc":20,"max_power":80}`,
+		"state_topic":        p.topic("cmd", "result"),
+		"value_template":     "{{ value_json.result.mode | default('self_use') }}",
+		"options": []string{
+			"self_use",
+			"economic",
+			"backup_power",
+			"pure_off_grid",
+			"forced_charging",
+			"forced_discharge",
+			"peak_shaving",
+			"time_of_use",
+		},
+		"optimistic":         true,
+		"availability_topic": p.availabilityTopic(),
+		"device":             p.deviceBlock(),
+		"entity_category":    "config",
+		"icon":               "mdi:battery-heart-variant",
+		"mode":               "select",
+	}
+	bbms, _ := json.Marshal(bmsSel)
+	bmsTok := p.cli.Publish(fmt.Sprintf("%s/select/hoymiles_has_bms_mode/config", p.cfg.DiscoveryPrefix), 0, true, bbms)
+	bmsTok.Wait()
+
 	sb, _ := json.Marshal(sel)
 	selTok := p.cli.Publish(fmt.Sprintf("%s/select/hoymiles_has_export_limit/config", p.cfg.DiscoveryPrefix), 0, true, sb)
 	selTok.Wait()
@@ -382,7 +411,7 @@ func (p *Publisher) announce() error {
 	p.mu.Lock()
 	p.announced = true
 	p.mu.Unlock()
-	log.Printf("mqtt discovery announced (%d sensors + last_update + 1 select + %d buttons) under %s expire_after=%ds",
+	log.Printf("mqtt discovery announced (%d sensors + last_update + 2 selects + %d buttons) under %s expire_after=%ds",
 		len(ents), len(buttons), p.cfg.DiscoveryPrefix, p.cfg.ExpireAfterSec)
 	return nil
 }
