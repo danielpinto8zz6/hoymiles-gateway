@@ -314,18 +314,36 @@ func (p *Publisher) announce() error {
 		tk.Wait()
 	}
 
-	// Command buttons (publish JSON to cmd topic)
+	// Intuitive HA controls: select for export limit + labeled action buttons
+	sel := map[string]any{
+		"name":               "Export power limit",
+		"unique_id":          "hoymiles_has_export_limit",
+		"command_topic":      p.topic("cmd"),
+		"command_template":   `{"cmd":"power_limit","percent":{{ value | int }}}`,
+		"state_topic":        p.topic("cmd", "result"),
+		"value_template":     "{{ value_json.result.percent | default('80') }}",
+		"options":            []string{"0", "25", "50", "80", "100"},
+		"optimistic":         true,
+		"availability_topic": p.availabilityTopic(),
+		"device":             p.deviceBlock(),
+		"entity_category":    "config",
+		"icon":               "mdi:speedometer",
+		"mode":               "select",
+	}
+	sb, _ := json.Marshal(sel)
+	selTok := p.cli.Publish(fmt.Sprintf("%s/select/hoymiles_has_export_limit/config", p.cfg.DiscoveryPrefix), 0, true, sb)
+	selTok.Wait()
+
 	buttons := []struct {
-		ID      string
-		Name    string
-		Icon    string
-		Payload string
+		ID       string
+		Name     string
+		Icon     string
+		Payload  string
+		Category string
 	}{
-		{"limit_80", "Power limit 80%", "mdi:speedometer", `{"cmd":"power_limit","percent":80}`},
-		{"limit_0", "Power limit 0% (stop export)", "mdi:transmission-tower-off", `{"cmd":"power_limit","percent":0}`},
-		{"limit_100", "Power limit 100%", "mdi:flash", `{"cmd":"power_limit","percent":100}`},
-		{"inv_on", "Inverter on", "mdi:power", `{"cmd":"inverter","on":true}`},
-		{"bms_balance", "BMS balance", "mdi:battery-heart-variant", `{"cmd":"bms_balance"}`},
+		{"bms_balance", "Run battery balance", "mdi:battery-heart-variant", `{"cmd":"bms_balance"}`, "config"},
+		{"inv_on", "Start inverter", "mdi:power", `{"cmd":"inverter","on":true}`, "config"},
+		{"limit_export_off", "Stop export (0%)", "mdi:transmission-tower-off", `{"cmd":"power_limit","percent":0}`, "config"},
 	}
 	for _, b := range buttons {
 		cfg := map[string]any{
@@ -335,7 +353,7 @@ func (p *Publisher) announce() error {
 			"payload_press":      b.Payload,
 			"availability_topic": p.availabilityTopic(),
 			"device":             p.deviceBlock(),
-			"entity_category":    "config",
+			"entity_category":    b.Category,
 			"icon":               b.Icon,
 		}
 		bb, _ := json.Marshal(cfg)
@@ -364,7 +382,7 @@ func (p *Publisher) announce() error {
 	p.mu.Lock()
 	p.announced = true
 	p.mu.Unlock()
-	log.Printf("mqtt discovery announced (%d sensors + last_update + %d buttons) under %s expire_after=%ds",
+	log.Printf("mqtt discovery announced (%d sensors + last_update + 1 select + %d buttons) under %s expire_after=%ds",
 		len(ents), len(buttons), p.cfg.DiscoveryPrefix, p.cfg.ExpireAfterSec)
 	return nil
 }
