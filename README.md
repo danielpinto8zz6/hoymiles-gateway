@@ -72,6 +72,8 @@ POST /api/v1/bms/mode
 
 ## Docker
 
+For detailed build instructions, multi-architecture builds, compose configurations, and complete environment variable documentation, see [`DOCKER.md`](DOCKER.md).
+
 ```bash
 docker build -t hoymiles-gateway .
 docker run --rm -p 8090:8090 hoymiles-gateway \
